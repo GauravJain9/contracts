@@ -202,6 +202,65 @@ describe('StakeManager', function () {
       assertBNEqual(await schellingCoin.balanceOf(staker._address), prevBalance.add(rAmount), 'Balance should be equal');
     });
 
+    it('should allow staker to add stake after withdraw or slash if either withdrawnAmount or slashPenaltyAmount is not the whole stake', async function () {
+      const epoch = await getEpoch();
+      const stake = tokenAmount('20000');
+      // let staker = await stakeManager.getStaker(1);
+      const stakerIdAcc1 = await stakeManager.stakerIds(signers[1].address);
+      const stakeBeforeAcc1 = (await stakeManager.stakers(stakerIdAcc1)).stake;
+      await schellingCoin.connect(signers[1]).approve(stakeManager.address, stake);
+      // adding stake after withdraw
+      await stakeManager.connect(signers[1]).stake(epoch, stake);
+      const stakeAfterAcc1 = (await stakeManager.stakers(stakerIdAcc1)).stake;
+      assertBNEqual(stakeAfterAcc1, stakeBeforeAcc1.add(stake), 'Stake did not increase on staking after withdraw');
+
+      await rewardManager.grantRole(await parameters.getRewardModifierHash(), signers[0].address);
+      await parameters.setSlashPenaltyNum(5000); // slashing less than whole stake
+      await rewardManager.slash(1, signers[10].address, epoch); // slashing signers[1]
+
+      const slashPenaltyAmount = (stakeAfterAcc1.mul((await parameters.slashPenaltyNum()))).div(await parameters.slashPenaltyDenom());
+      let staker = await stakeManager.getStaker(1);
+      const stakeAfterSlash = (await stakeManager.stakers(stakerIdAcc1)).stake;
+      assertBNEqual(stakeAfterSlash, stakeAfterAcc1.sub(slashPenaltyAmount), 'Stake should be less by slashPenalty');
+
+      const stake2 = tokenAmount('20000');
+      await schellingCoin.connect(signers[1]).approve(stakeManager.address, stake2);
+      await stakeManager.connect(signers[1]).stake(epoch, stake2);
+      staker = await stakeManager.getStaker(1);
+      assertBNEqual(staker.stake, stakeAfterSlash.add(stake2), 'Stake did not increase on staking after slash');
+    });
+
+    it('should not allow staker to add stake after withdrawing whole amount', async function () {
+      let epoch = await getEpoch();
+      let staker = await stakeManager.getStaker(1);
+      const amount = staker.stake;
+      await stakeManager.connect(signers[1]).unstake(epoch, 1, amount);
+      let lock = await stakeManager.locks(staker._address, staker.tokenAddress);
+      for (let i = 0; i < WITHDRAW_LOCK_PERIOD - 1; i++) {
+        await mineToNextEpoch();
+      }
+      staker = await stakeManager.getStaker(1);
+      // const prevStake = staker.stake;
+      const prevBalance = await schellingCoin.balanceOf(staker._address);
+      lock = await stakeManager.locks(staker._address, staker.tokenAddress);
+      const sToken = await stakedToken.attach(staker.tokenAddress);
+      const totalSupply = await sToken.totalSupply();
+      const rAmount = ((lock.amount).mul(staker.stake)).div(totalSupply);
+      console.log(Number(rAmount));
+      await mineToNextEpoch();
+      epoch = await getEpoch();
+      await (stakeManager.connect(signers[1]).withdraw(epoch, 1));
+      staker = await stakeManager.getStaker(1);
+      console.log(Number(staker.stake));
+      assertBNEqual(staker.stake, toBigNumber('0'), 'Updated stake is not equal to calculated stake');
+      assertBNEqual(await schellingCoin.balanceOf(staker._address), prevBalance.add(rAmount), 'Balance should be equal');
+    });
+
+    // it('should not allow staker to add stake after being slashed the whole amount')
+    // {
+    //
+    // }
+
     it('should allow staker to add stake after withdraw or slash both', async function () {
       // signers[1] has already withdrawn
       let staker = await stakeManager.getStaker(1);

@@ -24,7 +24,7 @@ const {
 const { setupContracts } = require('./helpers/testSetup');
 
 describe('StakeManager', function () {
-  describe('razor', async function () {
+  describe('RAZOR', async function () {
     let signers;
     let razor;
     let blockManager;

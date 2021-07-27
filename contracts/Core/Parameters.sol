@@ -6,12 +6,11 @@ import "./ACL.sol";
 
 contract Parameters is IParameters, ACL {
 
-    // TODO: Analyze what can be the maximum value (if needs to be reset) of these params.
     // constant type can be readjusted to some smaller type than uint256 for saving gas (storage variable packing).
     // penalty not reveal = 0.01% per epch
     uint256 public override penaltyNotRevealNum = 1;
     uint256 public override penaltyNotRevealDenom = 10000;
-    uint256 public override slashPenaltyNum = 10000;
+    uint256 public override slashPenaltyNum = 5000;
     uint256 public override slashPenaltyDenom = 10000;
 
     uint256 public override minStake = 100 * (10 ** 18);

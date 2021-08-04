@@ -131,6 +131,15 @@ describe('StakeManager', function () {
       assertBNEqual(await sToken.balanceOf(staker._address), stake1, 'Amount of minted sRzR is not correct');
     });
 
+    it('Staker should not be able to stake if stake is below minstake', async function () {
+      const epoch = await getEpoch();
+      const stake1 = tokenAmount('10');
+
+      await razor.connect(signers[1]).approve(stakeManager.address, stake1);
+      const tx = stakeManager.connect(signers[1]).stake(epoch, stake1);
+      await assertRevert(tx, 'staked amount is less than minimum stake required');
+    });
+
     it('should handle second staker correctly', async function () {
       const epoch = await getEpoch();
       const stake = tokenAmount('19000');

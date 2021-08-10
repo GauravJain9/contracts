@@ -37,21 +37,18 @@ jobs:
   test:
     docker:
       - image: 'cimg/node:16.5'
-    parallelism: 6
-    resource_class: medium
+    resource_class: large
     steps:
       - attach_workspace:
           at: .
       - run:
           name: Run tests
           command: |
-            TESTFILES=$(circleci tests glob "test/*.js" | circleci tests split --split-by=timings)
-            CI=true npm run test $TESTFILES
+            CI=true npm run test 
       - store_artifacts:
           path: test
           prefix: test
-      - store_test_results:
-          path: test-results
+
 
   lint:
     docker:
@@ -66,8 +63,7 @@ jobs:
       - store_artifacts:
           path: lint
           prefix: lint
-      - store_test_results:
-          path: test-results
+
 
   coverage:
     docker:
@@ -84,8 +80,6 @@ jobs:
       - store_artifacts:
           path: coverage
           prefix: coverage
-      - store_test_results:
-          path: test-results
 
   mythx:
     docker:
@@ -110,7 +104,7 @@ jobs:
             mythx --ci --yes analyze --remap-import
             "@openzeppelin/=$(pwd)/node_modules/@openzeppelin/" --solc-version
             0.8.4 contracts/ --swc-blacklist 103,120
-  
+
 notify:
   webhooks:
     - url: >-

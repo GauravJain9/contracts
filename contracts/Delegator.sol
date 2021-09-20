@@ -1,39 +1,36 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-
 import "./Core/interface/IAssetManager.sol";
+import "./Core/ACL.sol";
 
-
-contract Delegator {
-
+contract Delegator is ACL {
     address public delegate;
-    address public owner = msg.sender;
     IAssetManager public assetManager;
 
-    function getJob(
-        uint256 id
-    ) 
+    function upgradeDelegate(address newDelegateAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newDelegateAddress != address(0x0), "Zero Address check");
+        delegate = newDelegateAddress;
+        assetManager = IAssetManager(newDelegateAddress);
+    }
+
+    function getJob(uint8 id)
         external
         view
-        returns(
-            string memory url,
-            string memory selector,
+        returns (
+            bool active,
+            uint8 selectorType,
+            uint8 weight,
+            int8 power,
             string memory name,
-            bool repeat,
-            uint256 result
+            string memory selector,
+            string memory url
         )
     {
         return assetManager.getJob(id);
     }
 
-    function upgradeDelegate(address newDelegateAddress) public {
-        require(msg.sender == owner, "caller is not the owner");
-        delegate = newDelegateAddress;
-        assetManager = IAssetManager(newDelegateAddress);
-    }
-
-    function getResult(uint256 id) public view returns(uint256) {
-        return assetManager.getResult(id);
-    }
+    // function getResult(uint8 id) public view returns (uint256) {
+    //     return assetManager.getResult(id);
+    // }
 }
